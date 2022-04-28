@@ -1415,3 +1415,48 @@ TEST_CASE("Hash for indirect_value", "[TODO]") {
         !IsHashable<indirect_value<ProvidesThrowingHash>>::IsNoexcept);
   }
 }
+
+class Base
+{
+public:
+  virtual std::unique_ptr<Base> clone() = 0;
+
+  virtual int getNum() const = 0;
+};
+
+class Derived : public Base
+{
+  int m_int = {};
+public:
+  Derived(int i) : m_int(i) {}
+  std::unique_ptr<Base> clone() override
+  {
+    return std::make_unique<Derived>(*this);
+  }
+
+  virtual int getNum() const
+  {
+    return m_int;
+  }
+};
+
+template<typename T>
+class cloner
+{
+public:
+  T* operator()(T& t) const
+  {
+    return t.clone().release();
+  }
+};
+
+TEST_CASE("Polymorphic value", "[TODO]") {
+
+  // Work-around the attempt to prevent conversion from Derived to Base
+  Base* b = new Derived(42);
+  auto d = indirect_value<Base, cloner<Base>>(b, cloner<Base>());
+
+  auto d2(d);
+
+  REQUIRE(d->getNum() == d2->getNum());
+}
